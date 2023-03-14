@@ -22,6 +22,13 @@ type Transaction struct {
 	Data  string `json:"data"`
 }
 
+type Genesis struct {
+	Balances map[string]uint `json:"balances"`
+	Symbol   string          `json:"symbol"`
+
+	ForkTIP1 uint64 `json:"fork_tip_1"`
+}
+
 // Aplicar a transação à cadeia
 func (status *Status) apply(transaction Transaction) error {
 
@@ -32,7 +39,7 @@ func (status *Status) apply(transaction Transaction) error {
 	}
 
 	if transaction.Valor > status.Balances[transaction.Para] {
-		return fmt.Errorf("Usuario nao tem creditos suficientes para realizar esta operação")
+		return fmt.Errorf("usuario nao tem creditos suficientes para realizar esta operação")
 	}
 
 	status.Balances[transaction.Para] -= transaction.Valor
@@ -59,8 +66,7 @@ func NewStatusFromDB() (*Status, error) {
 	cwd, err := os.Getwd()
 	Check(err)
 	genFilePath := filepath.Join(cwd, "databases/json", "genesis.json")
-	genesis, err := loadGenesis(genFilePath)
-	Check(err)
+	genesis := loadGenesis(genFilePath)
 
 	balances := make(map[string]uint)
 	for conta, balance := range genesis.Balances {
@@ -108,4 +114,15 @@ func (status *Status) Persistir() {
 		//Depois de gravar em disco, tira ele do Pool de Memória
 		status.TransactionMemPool = status.TransactionMemPool[1:]
 	}
+}
+
+func loadGenesis(path string) Genesis {
+	content, err := os.ReadFile(path)
+	Check(err)
+
+	var loadedGenesis Genesis
+	err = json.Unmarshal(content, &loadedGenesis)
+	Check(err)
+
+	return loadedGenesis
 }
